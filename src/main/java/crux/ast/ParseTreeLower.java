@@ -55,6 +55,20 @@ public final class ParseTreeLower {
     return getType(ctx.Identifier().getText());
   }
 
+  private static Expression getLiteral(CruxParser.LiteralContext ctx) {
+    if (ctx.Integer() != null) {
+      return new LiteralInt(getPosition(ctx), Integer.parseInt(ctx.Integer().getText()));
+    }
+    if (ctx.False() != null) {
+      return new LiteralBool(getPosition(ctx), false);
+    }
+    if (ctx.True() != null) {
+      return new LiteralBool(getPosition(ctx), true);
+    }
+    System.err.println("getLiteral got no value");
+    return null;
+  }
+
   private StatementList getStatementList(CruxParser.StatementBlockContext ctx) {
     List<Statement> statements = ctx.statementList().statements.stream()
             .map(statement -> statement.accept(statementVisitor))
@@ -243,6 +257,7 @@ public final class ParseTreeLower {
     @Override
     public Statement visitIfStatement(CruxParser.IfStatementContext ctx) {
       Expression conditional = ctx.condition.accept(expressionVisitor);
+      symbolTable.enter();
 
       // construct then branch statement list
       StatementList thenBranch = getStatementList(ctx.thenBody);
@@ -250,10 +265,12 @@ public final class ParseTreeLower {
       if (ctx.elseBody != null) {
         // construct else branch statement list
         StatementList elseBranch = getStatementList(ctx.elseBody);
+        symbolTable.exit();
         return new IfElseBranch(getPosition(ctx), conditional, thenBranch, elseBranch);
-      } else {
-        return new IfElseBranch(getPosition(ctx), conditional, thenBranch, null);
       }
+
+      symbolTable.exit();
+      return new IfElseBranch(getPosition(ctx), conditional, thenBranch, null);
     }
 
     /**
@@ -261,15 +278,19 @@ public final class ParseTreeLower {
      * techniques as {@link #visitIfStatement(CruxParser.IfStatementContext)} to decompose this
      * construction.
      * 
-     * @return an AST {@link Loop}
+     * @return an AST {@link For}
      */
+
+    // TODO: add scoping
 
     @Override
     public Statement visitForStatement(CruxParser.ForStatementContext ctx) {
+      symbolTable.enter();
       Assignment init = (Assignment) visitAssignmentStatement(ctx.init);
       Expression condition = ctx.condition.accept(expressionVisitor);
       Assignment update = (Assignment) visitAssignmentStatementNoSemi(ctx.update);
       StatementList statements = getStatementList(ctx.body);
+      symbolTable.exit();
       return new For(getPosition(ctx), init, condition, update, statements);
     }
 
@@ -301,64 +322,111 @@ public final class ParseTreeLower {
      * grammar
      */
 
-//    @Override
-//    public Expression visitExpression0(CruxParser.Expression0Context ctx) {
-//
-//    }
+    @Override
+    public Expression visitExpression0(CruxParser.Expression0Context ctx) {
+      if (ctx.higherExpression != null) {
+        return ctx.higherExpression.accept(expressionVisitor);
+      }
+      Expression left = ctx.left.accept(expressionVisitor);
+      OpExpr.Operation op = OpExpr.Operation.valueOf(ctx.op.getText());
+      Expression right = ctx.right.accept(expressionVisitor);
+      return new OpExpr(getPosition(ctx), op, left, right);
+    }
 
     /**
      * Parse Expression1 to OpExpr Node Parsing the expression should be exactly as described in the
      * grammar
      */
 
-    /*
-     * @Override
-     * public Expression visitExpression1(CruxParser.Expression1Context ctx) { }
-     */
+    @Override
+    public Expression visitExpression1(CruxParser.Expression1Context ctx) {
+      if (ctx.higherExpression != null) {
+        return ctx.higherExpression.accept(expressionVisitor);
+      }
+      Expression left = ctx.left.accept(expressionVisitor);
+      OpExpr.Operation op = OpExpr.Operation.valueOf(ctx.op.getText());
+      Expression right = ctx.right.accept(expressionVisitor);
+      return new OpExpr(getPosition(ctx), op, left, right);
+    }
 
     /**
      * Parse Expression2 to OpExpr Node Parsing the expression should be exactly as described in the
      * grammar
      */
     
-    /*
-     * @Override
-     * public Expression visitExpression2(CruxParser.Expression2Context ctx) { }
-     */
+    @Override
+    public Expression visitExpression2(CruxParser.Expression2Context ctx) {
+      if (ctx.higherExpression != null) {
+        return ctx.higherExpression.accept(expressionVisitor);
+      }
+      Expression left = ctx.left.accept(expressionVisitor);
+      OpExpr.Operation op = OpExpr.Operation.valueOf(ctx.op.getText());
+      Expression right = ctx.right.accept(expressionVisitor);
+      return new OpExpr(getPosition(ctx), op, left, right);
+    }
 
     /**
      * Parse Expression3 to OpExpr Node Parsing the expression should be exactly as described in the
-     * grammer
+     * grammar
      */
 
-    /*
-     * @Override
-     * public Expression visitExpression3(CruxParser.Expression3Context ctx) { }
-     */
+    @Override
+    public Expression visitExpression3(CruxParser.Expression3Context ctx) {
+      if (ctx.negateExpression != null) {
+        return new OpExpr(getPosition(ctx), OpExpr.Operation.LOGIC_NOT, null, ctx.negateExpression.accept(expressionVisitor));
+      }
+      if (ctx.precedenceExpression != null) {
+        return ctx.precedenceExpression.accept(expressionVisitor);
+      }
+      if (ctx.designatorExpression != null) {
+        return ctx.designatorExpression.accept(expressionVisitor);
+      }
+      if (ctx.callExpression() != null) {
+        return ctx.callExpression().accept(expressionVisitor);
+      }
+      if (ctx.valueExpression != null) {
+        return ctx.valueExpression.accept(expressionVisitor);
+      }
+      System.err.println("visitExpression3 got invalid value");
+      return null;
+    }
 
     /**
      * Create an Call Node
      */
 
-    /* @Override
-     * public Call visitCallExpression(CruxParser.CallExpressionContext ctx) { }
-     */
+     @Override
+     public Call visitCallExpression(CruxParser.CallExpressionContext ctx) {
+       Position position = getPosition(ctx);
+       List<Expression> arguments = ctx.arguments.expressions.stream()
+               .map(expression -> expression.accept(expressionVisitor))
+               .collect(Collectors.toList());
+       Symbol function = symbolTable.lookup(position, ctx.functionName.getText());
+       return new Call(position, function, arguments);
+     }
 
     /**
      * visitDesignator will check for a name or ArrayAccess FYI it should account for the case when
      * the designator was dereferenced
      */
 
-    /* @Override
-     * public Expression visitDesignator(CruxParser.DesignatorContext ctx) { }
-     */
+     @Override
+     public Expression visitDesignator(CruxParser.DesignatorContext ctx) {
+       Position position = getPosition(ctx);
+       Symbol variable = symbolTable.lookup(position, ctx.name.getText());
+       if (ctx.index != null) {
+         return new ArrayAccess(position, variable, ctx.index.accept(expressionVisitor));
+       }
+       return new VarAccess(position, variable);
+     }
 
     /**
      * Create an Literal Node
      */
 
-    /* @Override
-     * public Expression visitLiteral(CruxParser.LiteralContext ctx) { }
-     */
+     @Override
+     public Expression visitLiteral(CruxParser.LiteralContext ctx) {
+       return getLiteral(ctx);
+     }
   }
 }

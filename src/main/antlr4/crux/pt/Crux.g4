@@ -37,29 +37,29 @@ parameterList: (parameters+=parameter (',' parameters+=parameter)*)?;
 parameter: type name=Identifier;
 
 expressionList: (expressions+=expression0 (',' expressions+=expression0)*)?;
-callExpression: functionName=Identifier '(' expressionList ')';
+callExpression: functionName=Identifier '(' arguments=expressionList ')';
 
 expression3
- : '!' expression3
- | '(' expression0 ')'
- | designator
+ : '!' negateExpression=expression3
+ | '(' precedenceExpression=expression0 ')'
+ | designatorExpression=designator
  | callExpression
- | literal
+ | valueExpression=literal
  ;
 
 expression2
- : expression3
- | expression2 op2 expression3
+ : higherExpression=expression3
+ | left=expression2 op=op2 right=expression3
  ;
 
 expression1
- : expression2
- | expression1 op1 expression2
+ : higherExpression=expression2
+ | left=expression1 op=op1 right=expression2
  ;
 
 expression0
- : expression1
- | expression1 op0 expression1
+ : higherExpression=expression1
+ | left=expression1 op=op0 right=expression1
  ;
 
 op2

@@ -11,8 +11,8 @@ public final class OpExpr extends BaseNode implements Expression, java.io.Serial
   static final long serialVersionUID = 12022L;
 
   public static enum Operation {
-    GE(">="), LE("<="), NE("!="), EQ("=="), GT(">"), LT("<"), ADD("+"), SUB("-"), MULT("*"), DIV(
-        "/"), LOGIC_AND("&&"), LOGIC_OR("||"), LOGIC_NOT("!");
+    GE(">="), LE("<="), NE("!="), EQ("=="), GT(">"), LT("<"), ADD("+"), SUB("-"), MULT("*"),
+    DIV("/"), LOGIC_AND("&&"), LOGIC_OR("||"), LOGIC_NOT("!");
 
     private String op;
 
