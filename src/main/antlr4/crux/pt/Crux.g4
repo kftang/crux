@@ -2,7 +2,7 @@ grammar Crux;
 program: declarationList EOF;
 
 statementBlock: '{' statementList '}';
-statementList: statement*;
+statementList: statements+=statement*;
 statement
  : variableDeclaration
  | callStatement
@@ -13,14 +13,14 @@ statement
  | returnStatement
  ;
 
-returnStatement: 'return' expression0 Semicolon;
+returnStatement: 'return' value=expression0 Semicolon;
 breakStatement: 'break' Semicolon;
 callStatement: callExpression Semicolon;
-assignmentStatement: designator '=' expression0 Semicolon;
-assignmentStatementNoSemi: designator '=' expression0;
+assignmentStatement: name=designator '=' value=expression0 Semicolon;
+assignmentStatementNoSemi: name=designator '=' value=expression0;
 
-ifStatement: 'if' expression0 statementBlock ('else' statementBlock)?;
-forStatement: 'for' '(' assignmentStatement expression0 ';' assignmentStatementNoSemi ')' statementBlock;
+ifStatement: 'if' condition=expression0 thenBody=statementBlock ('else' elseBody=statementBlock)?;
+forStatement: 'for' '(' init=assignmentStatement condition=expression0 ';' update=assignmentStatementNoSemi ')' body=statementBlock;
 
 declarationList: declaration*;
 declaration
@@ -29,15 +29,15 @@ declaration
  | functionDefinition
  ;
 
-functionDefinition: type Identifier '(' parameterList ')' statementBlock;
-arrayDeclaration: type Identifier '[' Integer ']' Semicolon;
-variableDeclaration: type Identifier Semicolon;
+functionDefinition: type name=Identifier '(' parameterList ')' body=statementBlock;
+arrayDeclaration: type name=Identifier '[' length=Integer ']' Semicolon;
+variableDeclaration: type name=Identifier Semicolon;
 
-parameterList: (parameter (',' parameter)*)?;
-parameter: type Identifier;
+parameterList: (parameters+=parameter (',' parameters+=parameter)*)?;
+parameter: type name=Identifier;
 
-expressionList: (expression0 (',' expression0)*)?;
-callExpression: Identifier '(' expressionList ')';
+expressionList: (expressions+=expression0 (',' expressions+=expression0)*)?;
+callExpression: functionName=Identifier '(' expressionList ')';
 
 expression3
  : '!' expression3
@@ -84,7 +84,7 @@ op0
  ;
 
 type: Identifier;
-designator: Identifier ('[' expression0 ']')?;
+designator: name=Identifier ('[' index=expression0 ']')?;
 
 literal
  : Integer

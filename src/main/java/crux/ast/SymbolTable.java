@@ -1,13 +1,10 @@
 package crux.ast;
 
-import crux.ast.Position;
 import crux.ast.types.*;
 
 
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Symbol table will map each symbol from Crux source code to its declaration or appearance in the
@@ -78,7 +75,8 @@ public final class SymbolTable {
   }
 
   private final PrintStream err;
-  private final ArrayList<Map<String, Symbol>> symbolScopes = new ArrayList<>();
+  // stack of symbol tables
+  private final Deque<Map<String, Symbol>> symbolTables = new LinkedList<>();
 
   private boolean encounteredError = false;
 
@@ -96,7 +94,7 @@ public final class SymbolTable {
    */
 
   void enter() {
-    //TODO
+    symbolTables.push(new HashMap<>());
   }
 
   /**
@@ -104,7 +102,7 @@ public final class SymbolTable {
    */
 
   void exit() {
-    //TODO
+    symbolTables.pop();
   }
 
   /**
@@ -112,8 +110,15 @@ public final class SymbolTable {
    * current scope that's a declareation error.
    */
   Symbol add(Position pos, String name, Type type) {
-    //TODO
-    return null;
+    var symbolTable = symbolTables.peek();
+    if (symbolTable.containsKey(name)) {
+      err.printf("RedefinitionError%s[Variable %s already declared.]%n", pos, name);
+      encounteredError = true;
+      return new Symbol(name, "RedefinitionError");
+    }
+    var symbol = new Symbol(name, type);
+    symbolTable.put(name, symbol);
+    return symbol;
   }
 
   /**
@@ -135,7 +140,11 @@ public final class SymbolTable {
    * Try to find a symbol in the table starting form the most recent scope.
    */
   private Symbol find(String name) {
-    //TODO
+    for (var symbolTable : symbolTables) {
+      if (symbolTable.containsKey(name)) {
+        return symbolTable.get(name);
+      }
+    }
     return null;
   }
 }
