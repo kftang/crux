@@ -1,7 +1,10 @@
 package crux.ast;
 
 import crux.ast.traversal.NodeVisitor;
+
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * AST node for Operations such as add, sub, ==. Most of operation experssions will have left and
@@ -22,6 +25,12 @@ public final class OpExpr extends BaseNode implements Expression, java.io.Serial
 
     public String toString() {
       return op;
+    }
+
+    public static Optional<Operation> get(String op) {
+      return Arrays.stream(Operation.values())
+              .filter(operation -> operation.op.equals(op))
+              .findFirst();
     }
   }
 

@@ -8,14 +8,9 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
@@ -25,7 +20,7 @@ final class CompilerStageTests {
    * all stages: private final String[] TEST_TO_RUN = {"stage1", "stage2", "stage3", "stage4",
    * "stage5"};
    */
-  private final String[] TEST_TO_RUN = {"stage2"};
+  private final String[] TEST_TO_RUN = {"stage1", "stage2"};
 
   private boolean skipStage(String stageName) {
     return List.of(TEST_TO_RUN).stream().noneMatch(s -> s.toLowerCase().equals(stageName));
@@ -124,6 +119,8 @@ final class CompilerStageTests {
         sp = future.get(TIMEOUT, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
         future.cancel(true);
+      } catch (ExecutionException e) {
+//        e.printStackTrace();
       }
       if (sp == null) {
         Assertions.fail(String.format("Timeout for AST for program %s.", test.in));

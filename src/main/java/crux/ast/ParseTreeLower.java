@@ -5,8 +5,10 @@ import crux.pt.CruxParser;
 import crux.ast.types.*;
 import crux.ast.SymbolTable.Symbol;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.Token;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,7 +30,7 @@ public final class ParseTreeLower {
   }
 
   private static Position getPosition(ParserRuleContext ctx) {
-    var start = ctx.start;
+    Token start = ctx.start;
     return new Position(start.getLine());
   }
 
@@ -46,6 +48,7 @@ public final class ParseTreeLower {
         break;
       default:
         // error, type is not valid
+        System.out.println("getType got invalid type");
         break;
     }
     return type;
@@ -65,15 +68,8 @@ public final class ParseTreeLower {
     if (ctx.True() != null) {
       return new LiteralBool(getPosition(ctx), true);
     }
-    System.err.println("getLiteral got no value");
+    System.out.println("getLiteral got no value");
     return null;
-  }
-
-  private StatementList getStatementList(CruxParser.StatementBlockContext ctx) {
-    List<Statement> statements = ctx.statementList().statements.stream()
-            .map(statement -> statement.accept(statementVisitor))
-            .collect(Collectors.toList());
-    return new StatementList(getPosition(ctx), statements);
   }
 
   /**
@@ -92,7 +88,10 @@ public final class ParseTreeLower {
    */
 
   public DeclarationList lower(CruxParser.ProgramContext program) {
-    return null;
+    List<Declaration> declarations = program.declarationList().declaration().stream()
+            .map(declaration -> declaration.accept(declarationVisitor))
+            .collect(Collectors.toList());
+    return new DeclarationList(getPosition(program), declarations);
   }
 
   /**
@@ -101,9 +100,12 @@ public final class ParseTreeLower {
    * @return a {@link StatementList} AST object.
    */
 
-  /*
-   * private StatementList lower(CruxParser.StatementListContext statementList) { } 
-   */
+  private StatementList lower(CruxParser.StatementListContext statementList) {
+    List<Statement> statements = statementList.statements.stream()
+            .map(statement -> statement.accept(statementVisitor))
+            .collect(Collectors.toList());
+    return new StatementList(getPosition(statementList), statements);
+  }
 
   /**
    * Similar to {@link #lower(CruxParser.StatementListContext)}, but handles symbol table as well.
@@ -111,9 +113,12 @@ public final class ParseTreeLower {
    * @return a {@link StatementList} AST object.
    */
 
-  /*
-   * private StatementList lower(CruxParser.StatementBlockContext statementBlock) { }
-   */
+  private StatementList lower(CruxParser.StatementBlockContext statementBlock) {
+    symbolTable.enter();
+    StatementList statementList = lower(statementBlock.statementList());
+    symbolTable.exit();
+    return statementList;
+  }
 
   /**
    * A parse tree visitor to create AST nodes derived from {@link Declaration}
@@ -179,7 +184,7 @@ public final class ParseTreeLower {
               .collect(Collectors.toList());
 
       // lower all statements in statement list
-      StatementList statements = getStatementList(ctx.body);
+      StatementList statements = lower(ctx.body);
       symbolTable.exit();
 
       return new FunctionDefinition(position, symbol, parameters, statements);
@@ -243,7 +248,7 @@ public final class ParseTreeLower {
 
     @Override
     public Statement visitCallStatement(CruxParser.CallStatementContext ctx) {
-      return (Statement) expressionVisitor.visitCallStatement(ctx);
+      return expressionVisitor.visitCallExpression(ctx.callExpression());
     }
 
     /**
@@ -257,20 +262,17 @@ public final class ParseTreeLower {
     @Override
     public Statement visitIfStatement(CruxParser.IfStatementContext ctx) {
       Expression conditional = ctx.condition.accept(expressionVisitor);
-      symbolTable.enter();
 
       // construct then branch statement list
-      StatementList thenBranch = getStatementList(ctx.thenBody);
+      StatementList thenBranch = lower(ctx.thenBody);
 
       if (ctx.elseBody != null) {
         // construct else branch statement list
-        StatementList elseBranch = getStatementList(ctx.elseBody);
-        symbolTable.exit();
+        StatementList elseBranch = lower(ctx.elseBody);
         return new IfElseBranch(getPosition(ctx), conditional, thenBranch, elseBranch);
       }
 
-      symbolTable.exit();
-      return new IfElseBranch(getPosition(ctx), conditional, thenBranch, null);
+      return new IfElseBranch(getPosition(ctx), conditional, thenBranch, new StatementList(getPosition(ctx), new ArrayList<>()));
     }
 
     /**
@@ -281,15 +283,13 @@ public final class ParseTreeLower {
      * @return an AST {@link For}
      */
 
-    // TODO: add scoping
-
     @Override
     public Statement visitForStatement(CruxParser.ForStatementContext ctx) {
       symbolTable.enter();
       Assignment init = (Assignment) visitAssignmentStatement(ctx.init);
       Expression condition = ctx.condition.accept(expressionVisitor);
       Assignment update = (Assignment) visitAssignmentStatementNoSemi(ctx.update);
-      StatementList statements = getStatementList(ctx.body);
+      StatementList statements = lower(ctx.body);
       symbolTable.exit();
       return new For(getPosition(ctx), init, condition, update, statements);
     }
@@ -328,7 +328,7 @@ public final class ParseTreeLower {
         return ctx.higherExpression.accept(expressionVisitor);
       }
       Expression left = ctx.left.accept(expressionVisitor);
-      OpExpr.Operation op = OpExpr.Operation.valueOf(ctx.op.getText());
+      OpExpr.Operation op = OpExpr.Operation.get(ctx.op.getText()).get();
       Expression right = ctx.right.accept(expressionVisitor);
       return new OpExpr(getPosition(ctx), op, left, right);
     }
@@ -344,7 +344,7 @@ public final class ParseTreeLower {
         return ctx.higherExpression.accept(expressionVisitor);
       }
       Expression left = ctx.left.accept(expressionVisitor);
-      OpExpr.Operation op = OpExpr.Operation.valueOf(ctx.op.getText());
+      OpExpr.Operation op = OpExpr.Operation.get(ctx.op.getText()).get();
       Expression right = ctx.right.accept(expressionVisitor);
       return new OpExpr(getPosition(ctx), op, left, right);
     }
@@ -360,7 +360,7 @@ public final class ParseTreeLower {
         return ctx.higherExpression.accept(expressionVisitor);
       }
       Expression left = ctx.left.accept(expressionVisitor);
-      OpExpr.Operation op = OpExpr.Operation.valueOf(ctx.op.getText());
+      OpExpr.Operation op = OpExpr.Operation.get(ctx.op.getText()).get();
       Expression right = ctx.right.accept(expressionVisitor);
       return new OpExpr(getPosition(ctx), op, left, right);
     }
@@ -373,7 +373,7 @@ public final class ParseTreeLower {
     @Override
     public Expression visitExpression3(CruxParser.Expression3Context ctx) {
       if (ctx.negateExpression != null) {
-        return new OpExpr(getPosition(ctx), OpExpr.Operation.LOGIC_NOT, null, ctx.negateExpression.accept(expressionVisitor));
+        return new OpExpr(getPosition(ctx), OpExpr.Operation.LOGIC_NOT, ctx.negateExpression.accept(expressionVisitor), null);
       }
       if (ctx.precedenceExpression != null) {
         return ctx.precedenceExpression.accept(expressionVisitor);
@@ -387,7 +387,7 @@ public final class ParseTreeLower {
       if (ctx.valueExpression != null) {
         return ctx.valueExpression.accept(expressionVisitor);
       }
-      System.err.println("visitExpression3 got invalid value");
+      System.out.println("visitExpression3 got invalid value");
       return null;
     }
 

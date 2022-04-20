@@ -82,6 +82,21 @@ public final class SymbolTable {
 
   SymbolTable(PrintStream err) {
     this.err = err;
+    Map<String, Symbol> globals = new HashMap<>();
+    // initialize globals
+    Symbol readInt = new Symbol("readInt", new FuncType(new TypeList(), new IntType()));
+    Symbol readChar = new Symbol("readChar", new FuncType(new TypeList(), new IntType()));
+    Symbol printBool = new Symbol("printBool", new FuncType(TypeList.of(new BoolType()), new VoidType()));
+    Symbol printInt = new Symbol("printInt", new FuncType(TypeList.of(new IntType()), new VoidType()));
+    Symbol printChar = new Symbol("printChar", new FuncType(TypeList.of(new IntType()), new VoidType()));
+    Symbol println = new Symbol("println", new FuncType(new TypeList(), new VoidType()));
+    globals.put("readInt" ,readInt);
+    globals.put("readChar" ,readChar);
+    globals.put("printBool" ,printBool);
+    globals.put("printInt" ,printInt);
+    globals.put("printChar" ,printChar);
+    globals.put("println" ,println);
+    symbolTables.push(globals);
     //TODO
   }
 
@@ -140,7 +155,9 @@ public final class SymbolTable {
    * Try to find a symbol in the table starting form the most recent scope.
    */
   private Symbol find(String name) {
-    for (var symbolTable : symbolTables) {
+    var it = symbolTables.descendingIterator();
+    while (it.hasNext()) {
+      var symbolTable = it.next();
       if (symbolTable.containsKey(name)) {
         return symbolTable.get(name);
       }
