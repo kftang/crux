@@ -155,9 +155,7 @@ public final class SymbolTable {
    * Try to find a symbol in the table starting form the most recent scope.
    */
   private Symbol find(String name) {
-    var it = symbolTables.descendingIterator();
-    while (it.hasNext()) {
-      var symbolTable = it.next();
+    for (var symbolTable : symbolTables) {
       if (symbolTable.containsKey(name)) {
         return symbolTable.get(name);
       }

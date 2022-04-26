@@ -34,7 +34,6 @@ public final class TypeList extends Type implements Iterable<Type>, java.io.Seri
     return list.isEmpty();
   }
 
-  /*
   @Override
   public boolean equivalent(Type that) {
     if (that.getClass() != TypeList.class)
@@ -50,7 +49,7 @@ public final class TypeList extends Type implements Iterable<Type>, java.io.Seri
         return false;
     }
     return true;
-    }*/
+    }
 
   @Override
   public Iterator<Type> iterator() {

@@ -35,23 +35,19 @@ public final class ParseTreeLower {
   }
 
   private static Type getType(String typeString) {
-    Type type = null;
     switch (typeString) {
       case "void":
-        type = new VoidType();
-        break;
+        return new VoidType();
       case "bool":
-        type = new BoolType();
-        break;
+        return new BoolType();
       case "int":
-        type = new IntType();
-        break;
+        return new IntType();
       default:
         // error, type is not valid
         System.out.println("getType got invalid type");
         break;
     }
-    return type;
+    return null;
   }
 
   private static Type getType(CruxParser.TypeContext ctx) {
