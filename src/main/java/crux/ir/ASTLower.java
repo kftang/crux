@@ -267,6 +267,17 @@ public final class ASTLower implements NodeVisitor<InstPair> {
   @Override
   public InstPair visit(Call call) {
     List<LocalVar> args = new ArrayList<>();
+    // no args to parse
+    if (call.getArguments().isEmpty()) {
+      if (call.getType() instanceof VoidType) {
+        CallInst callInst = new CallInst(call.getCallee(), args);
+        return new InstPair(callInst);
+      }
+      LocalVar returnVar = mCurrentFunction.getTempVar(call.getType());
+      CallInst callInst = new CallInst(returnVar, call.getCallee(), args);
+      return new InstPair(callInst, returnVar);
+    }
+
     InstPair last = null;
     InstPair first = null;
     for (Node node : call.getArguments()) {
@@ -313,26 +324,28 @@ public final class ASTLower implements NodeVisitor<InstPair> {
     switch (operation.getOp()) {
       case LOGIC_AND: {
         JumpInst jumpInst = new JumpInst(lhs.value);
-        CopyInst falseCopyInst = new CopyInst(localVar, rhs.value);
-        CopyInst trueCopyInst = new CopyInst(localVar, lhs.value);
+        CopyInst trueCopyInst = new CopyInst(localVar, rhs.value);
+        CopyInst falseCopyInst = new CopyInst(localVar, BooleanConstant.get(mCurrentProgram, false));
         NopInst endInst = new NopInst();
-        jumpInst.setNext(0, rhs.start);
-        jumpInst.setNext(1, trueCopyInst);
-        rhs.setNext(falseCopyInst);
+        lhs.setNext(jumpInst);
+        jumpInst.setNext(0, falseCopyInst);
+        jumpInst.setNext(1, rhs.start);
+        rhs.setNext(trueCopyInst);
         falseCopyInst.setNext(0, endInst);
         trueCopyInst.setNext(0, endInst);
         return new InstPair(lhs.start, endInst, localVar);
       }
       case LOGIC_OR: {
         JumpInst jumpInst = new JumpInst(lhs.value);
-        CopyInst falseCopyInst = new CopyInst(localVar, lhs.value);
-        CopyInst trueCopyInst = new CopyInst(localVar, rhs.value);
+        CopyInst trueCopyInst = new CopyInst(localVar, BooleanConstant.get(mCurrentProgram, true));
+        CopyInst falseCopyInst = new CopyInst(localVar, rhs.value);
         NopInst endInst = new NopInst();
-        jumpInst.setNext(0, falseCopyInst);
-        jumpInst.setNext(1, rhs.start);
-        rhs.setNext(trueCopyInst);
-        trueCopyInst.setNext(0, endInst);
+        lhs.setNext(jumpInst);
+        jumpInst.setNext(0, rhs.start);
+        jumpInst.setNext(1, trueCopyInst);
+        rhs.setNext(falseCopyInst);
         falseCopyInst.setNext(0, endInst);
+        trueCopyInst.setNext(0, endInst);
         return new InstPair(lhs.start, endInst, localVar);
       }
       case ADD:
@@ -454,11 +467,12 @@ public final class ASTLower implements NodeVisitor<InstPair> {
     InstPair bodyInst = loop.getBody().accept(this);
     InstPair incInst = loop.getIncrement().accept(this);
     JumpInst checkCond = new JumpInst(condInst.value);
+    initInst.setNext(condInst);
+    condInst.setNext(checkCond);
     checkCond.setNext(0, endInst);
     checkCond.setNext(1, bodyInst.start);
-    condInst.setNext(checkCond);
     bodyInst.setNext(incInst);
-    incInst.setNext(checkCond);
+    incInst.setNext(condInst);
     loopExits.pop();
     return new InstPair(initInst.start, endInst);
   }
