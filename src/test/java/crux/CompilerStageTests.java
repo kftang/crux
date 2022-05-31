@@ -21,6 +21,7 @@ final class CompilerStageTests {
    * "stage5"};
    */
   private final String[] TEST_TO_RUN = {"stage1", "stage2", "stage3"};
+//  private final String[] TEST_TO_RUN = {"stage1", "stage2", "stage3", "stage4"};
 
   private boolean skipStage(String stageName) {
     return List.of(TEST_TO_RUN).stream().noneMatch(s -> s.toLowerCase().equals(stageName));
