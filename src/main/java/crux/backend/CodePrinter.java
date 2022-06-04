@@ -16,11 +16,16 @@ public class CodePrinter {
   }
 
   public void printLabel(String s) {
-    out.println(s);
+    out.printf("%s:%n", s);
   }
 
   public void printCode(String s) {
     out.println("    " + s);
+  }
+
+  public void printCodef(String format, Object... args) {
+    out.printf(format, args);
+    out.println();
   }
 
   public void close() {
