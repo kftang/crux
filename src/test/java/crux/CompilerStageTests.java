@@ -21,7 +21,7 @@ final class CompilerStageTests {
    * "stage5"};
    */
 //  private final String[] TEST_TO_RUN = {"stage1", "stage2", "stage3"};
-  private final String[] TEST_TO_RUN = {"stage1", "stage2", "stage3", "stage4"};
+  private final String[] TEST_TO_RUN = {"stage1", "stage2", "stage3", "stage4", "stage5"};
 
   private boolean skipStage(String stageName) {
     return List.of(TEST_TO_RUN).stream().noneMatch(s -> s.toLowerCase().equals(stageName));
@@ -41,7 +41,7 @@ final class CompilerStageTests {
     public String b;
   }
 
-  public static final int TIMEOUT = 20;
+  public static final int TIMEOUT = 2;
 
   @TestFactory
   Stream<DynamicTest> parseTree() throws IOException {
@@ -260,6 +260,18 @@ final class CompilerStageTests {
           Process build = runtime.exec("gcc a.s src/runtime/runtime.c -o autotest.bin");
           try {
             if (build.waitFor() != 0) {
+//              BufferedReader stdInput = new BufferedReader(new
+//                      InputStreamReader(build.getInputStream()));
+//
+//              BufferedReader stdError = new BufferedReader(new
+//                      InputStreamReader(build.getErrorStream()));
+//
+//              while (stdInput.ready()) {
+//                System.out.println(stdInput.readLine());
+//              }
+//              while (stdError.ready()) {
+//                System.out.println(stdError.readLine());
+//              }
               throw new Error("Assembling and linking failed");
             }
           } catch (Exception e) {

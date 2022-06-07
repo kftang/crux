@@ -19,13 +19,14 @@ public class CodePrinter {
     out.printf("%s:%n", s);
   }
 
+  public void print(String s) { out.println(s); }
+
   public void printCode(String s) {
     out.println("    " + s);
   }
 
   public void printCodef(String format, Object... args) {
-    out.printf(format, args);
-    out.println();
+    out.printf(String.format("    %s%n", format), args);
   }
 
   public void close() {
